@@ -10,6 +10,7 @@ import {
 import { buildStations } from "./map/stations.js";
 import { buildRoutes } from "./map/routes.js";
 import { registerRouteGroups, fitToData } from "./map/setup.js";
+
 import {
   renderOffer as renderOfferModule,
   renderHand as renderHandModule,
@@ -17,6 +18,19 @@ import {
   drawTickets as drawTicketsModule,
   keepSelectedTickets as keepSelectedTicketsModule
 } from "./game/tickets.js";
+
+import {
+  connectionPointsForLength as connectionPointsForLengthModule,
+  isRouteComplete as isRouteCompleteModule,
+  getCompletedRouteKeys as getCompletedRouteKeysModule,
+  buildClaimedGraph as buildClaimedGraphModule,
+  areCitiesConnected as areCitiesConnectedModule,
+  computeScores as computeScoresModule,
+  getIncompleteTickets as getIncompleteTicketsModule,
+  getHighlightedStationNames as getHighlightedStationNamesModule,
+  getGuideDestinationsForStation as getGuideDestinationsForStationModule
+} from "./game/scoring.js";
+
 const SUPABASE_URL = 'https://iloeoccqvxwwlmgbbweu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlsb2VvY2Nxdnh3d2xtZ2Jid2V1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzg3NDIsImV4cCI6MjA5MDY1NDc0Mn0.PseTgg81ZTeeIohlILmgHLNx31KlzphubwVi6strXPw';
 const GAME_ID = 'europe-main';
@@ -1105,85 +1119,39 @@ function updateRouteStyle(entry) {
 }
 
 function connectionPointsForLength(length) {
-  return ROUTE_POINT_VALUES[length] ?? length;
+  return connectionPointsForLengthModule(length, ROUTE_POINT_VALUES);
 }
 
 function isRouteComplete(routeKey) {
-  const group = routeGroups[routeKey];
-  return !!group && group.segmentIds.every(id => gameState.claimed_segments.includes(id));
+  return isRouteCompleteModule(routeKey, routeGroups, gameState);
 }
 
 function getCompletedRouteKeys() {
-  return Object.keys(routeGroups).filter(isRouteComplete);
+  return getCompletedRouteKeysModule(routeGroups, gameState);
 }
 
 function buildClaimedGraph() {
-  const graph = new Map();
-  getCompletedRouteKeys().forEach(routeKey => {
-    const group = routeGroups[routeKey];
-    if (!graph.has(group.start)) graph.set(group.start, new Set());
-    if (!graph.has(group.end)) graph.set(group.end, new Set());
-    graph.get(group.start).add(group.end);
-    graph.get(group.end).add(group.start);
-  });
-  return graph;
+  return buildClaimedGraphModule(routeGroups, gameState);
 }
 
 function areCitiesConnected(start, end, graph) {
-  if (start === end) return true;
-  if (!graph.has(start) || !graph.has(end)) return false;
-  const queue = [start];
-  const visited = new Set([start]);
-  while (queue.length) {
-    const current = queue.shift();
-    for (const next of graph.get(current)) {
-      if (next === end) return true;
-      if (!visited.has(next)) {
-        visited.add(next);
-        queue.push(next);
-      }
-    }
-  }
-  return false;
+  return areCitiesConnectedModule(start, end, graph);
 }
 
 function computeScores() {
-  const completedKeys = getCompletedRouteKeys();
-  const connectionPoints = completedKeys.reduce((sum, key) => sum + connectionPointsForLength(routeGroups[key].length), 0);
-  const graph = buildClaimedGraph();
-  const ticketPoints = gameState.tickets_hand.reduce((sum, ticket) => sum + (areCitiesConnected(ticket.start, ticket.end, graph) ? ticket.points : 0), 0);
-  return {
-    completedConnections: completedKeys.length,
-    connectionPoints,
-    ticketPoints,
-    totalPoints: connectionPoints + ticketPoints,
-    graph
-  };
+  return computeScoresModule(routeGroups, gameState, ROUTE_POINT_VALUES);
 }
 
 function getIncompleteTickets() {
-  const graph = buildClaimedGraph();
-  return gameState.tickets_hand.filter(ticket => !areCitiesConnected(ticket.start, ticket.end, graph));
+  return getIncompleteTicketsModule(routeGroups, gameState);
 }
 
 function getHighlightedStationNames() {
-  const names = new Set();
-  getIncompleteTickets().forEach(ticket => {
-    names.add(ticket.start);
-    names.add(ticket.end);
-  });
-  return names;
+  return getHighlightedStationNamesModule(routeGroups, gameState);
 }
 
 function getGuideDestinationsForStation(stationName) {
-  const graph = buildClaimedGraph();
-  const destinations = [];
-  gameState.tickets_hand.forEach(ticket => {
-    if (areCitiesConnected(ticket.start, ticket.end, graph)) return;
-    if (ticket.start === stationName) destinations.push(ticket.end);
-    else if (ticket.end === stationName) destinations.push(ticket.start);
-  });
-  return [...new Set(destinations)];
+  return getGuideDestinationsForStationModule(stationName, routeGroups, gameState);
 }
 
 function clearStationGuides() {
