@@ -7,6 +7,7 @@ import {
   applySidebarState,
   toggleSidebar
 } from "./ui/sidebars.js";   
+import { buildStations } from "./map/stations.js";
 const SUPABASE_URL = 'https://iloeoccqvxwwlmgbbweu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlsb2VvY2Nxdnh3d2xtZ2Jid2V1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzg3NDIsImV4cCI6MjA5MDY1NDc0Mn0.PseTgg81ZTeeIohlILmgHLNx31KlzphubwVi6strXPw';
 const GAME_ID = 'europe-main';
@@ -1279,26 +1280,6 @@ function buildRoutes() {
   });
 }
 
-function buildStations() {
-  stationsData.features.forEach(feature => {
-    const [lng, lat] = feature.geometry.coordinates;
-    const name = String(feature.properties.name || '').trim();
-    const layer = L.circleMarker([lat, lng], {
-      radius: 5,
-      color: '#7d3e12',
-      weight: 2,
-      fillColor: '#d07a34',
-      fillOpacity: 0.96
-    });
-    stationLayersByName[name] = layer;
-    stationCoordsByName[name] = [lat, lng];
-    layer.on('click', () => handleStationClick(name));
-    layer.bindPopup(`<div class="popup-title">${escapeHtml(name)}</div><div>Station</div>`);
-    layer.addTo(stationLayerGroup);
-  });
-  updateStationStyles();
-}
-
 function fitToData() {
   const bounds = L.latLngBounds([]);
   Object.values(routeLayersById).forEach(entry => bounds.extend(entry.bounds));
@@ -1614,7 +1595,16 @@ setTrainCardTrayOpen(false);
 initAccordions();
 registerRouteGroups();
 buildRoutes();
-buildStations();
+buildStations({
+  stationsData,
+  stationLayerGroup,
+  stationLayersByName,
+  stationCoordsByName,
+  handleStationClick,
+  updateStationStyles,
+  escapeHtml,
+  L
+});
 fitToData();
 map.whenReady(async () => {
   refreshAllTrainOverlays();
