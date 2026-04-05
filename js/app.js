@@ -168,7 +168,7 @@ function updateDrawControls() {
 }
 
 function drawTickets() {
-  controller.onDrawTickets();
+  return controller.onDrawTickets();
 }
 
 function keepSelectedTickets() {
