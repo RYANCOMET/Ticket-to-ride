@@ -9,6 +9,7 @@ import {
 } from "./ui/sidebars.js";   
 import { buildStations } from "./map/stations.js";
 import { buildRoutes } from "./map/routes.js";
+import { registerRouteGroups, fitToData } from "./map/setup.js";
 const SUPABASE_URL = 'https://iloeoccqvxwwlmgbbweu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlsb2VvY2Nxdnh3d2xtZ2Jid2V1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzg3NDIsImV4cCI6MjA5MDY1NDc0Mn0.PseTgg81ZTeeIohlILmgHLNx31KlzphubwVi6strXPw';
 const GAME_ID = 'europe-main';
@@ -714,26 +715,6 @@ function parseRouteEndpoints(routeKey) {
   return { start: parts[0] || routeKey, end: parts[1] || routeKey };
 }
 
-function registerRouteGroups() {
-  routesData.features.forEach(feature => {
-    const routeKey = parseRouteKey(feature.properties.name);
-    const length = parseRouteLength(feature.properties.name);
-    if (!routeGroups[routeKey]) {
-      const endpoints = parseRouteEndpoints(routeKey);
-      routeGroups[routeKey] = {
-        key: routeKey,
-        start: endpoints.start,
-        end: endpoints.end,
-        length,
-        claim_type: parseRouteClaimType(feature),
-        segmentIds: []
-      };
-    }
-    routeGroups[routeKey].segmentIds.push(feature.properties.id);
-    segmentToRouteKey[feature.properties.id] = routeKey;
-  });
-}
-
 function isClaimed(id) {
   return gameState.claimed_segments.includes(id);
 }
@@ -1255,16 +1236,6 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
-}
-
-function fitToData() {
-  const bounds = L.latLngBounds([]);
-  Object.values(routeLayersById).forEach(entry => bounds.extend(entry.bounds));
-  if (bounds.isValid()) {
-    map.fitBounds(bounds.pad(0.03));
-  } else {
-    map.setView([50, 10], 5);
-  }
 }
 
 function applyStateToVisuals() {
