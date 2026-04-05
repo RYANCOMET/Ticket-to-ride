@@ -1,6 +1,12 @@
 import { routesData } from "./data/routes-data.js";
 import { stationsData } from "./data/stations-data.js";
 import { state } from "./state.js";
+import { initAccordions } from "./ui/accordions.js";
+import {
+  syncMobileSidebarMode,
+  applySidebarState,
+  toggleSidebar
+} from "./ui/sidebars.js";
 
 const { createClient } = window.supabase;
 const { createClient } = window.supabase;
@@ -1588,134 +1594,11 @@ async function pollForRemoteUpdates() {
   }
 }
 
-function initAccordions() {
-  document.querySelectorAll('.accordion-toggle').forEach(toggle => {
-    toggle.addEventListener('click', () => {
-      const item = toggle.closest('.accordion-item');
-      if (!item) return;
-      item.classList.toggle('is-open');
-    });
-  });
-}
-
-
 const MOBILE_SIDEBAR_BREAKPOINT = 950;
 
 function isMobileSidebarMode() {
   return window.innerWidth <= MOBILE_SIDEBAR_BREAKPOINT && window.innerHeight > window.innerWidth;
 }
-
-function syncMobileSidebarMode() {
-  const bodyEl = document.body;
-  const mobile = isMobileSidebarMode();
-  bodyEl.classList.toggle('mobile-sidebar-mode', mobile);
-
-  if (mobile) {
-    if (!bodyEl.dataset.mobileSidebarInitialized) {
-      bodyEl.classList.add('left-sidebar-collapsed', 'right-sidebar-collapsed');
-      bodyEl.dataset.mobileSidebarInitialized = 'true';
-    }
-  } else {
-    delete bodyEl.dataset.mobileSidebarInitialized;
-  }
-
-  applySidebarState();
-  setTimeout(() => {
-    if (map && typeof map.invalidateSize === 'function') {
-      map.invalidateSize(true);
-      if (typeof map._onResize === 'function') {
-        map._onResize();
-      }
-    }
-    refreshAllTrainOverlays();
-  }, 260);
-}
-
-function applySidebarState() {
-  const bodyEl = document.body;
-  const leftBtn = document.getElementById('leftSidebarToggle');
-  const rightBtn = document.getElementById('rightSidebarToggle');
-  const leftCollapsed = bodyEl.classList.contains('left-sidebar-collapsed');
-  const rightCollapsed = bodyEl.classList.contains('right-sidebar-collapsed');
-  const mobile = bodyEl.classList.contains('mobile-sidebar-mode');
-
-  if (leftBtn) {
-    if (mobile) {
-      const leftOpen = !leftCollapsed;
-      leftBtn.textContent = leftOpen ? '×' : '☰';
-      leftBtn.setAttribute('aria-expanded', leftOpen ? 'true' : 'false');
-      leftBtn.setAttribute('aria-label', leftOpen ? 'Close game panel' : 'Open game panel');
-      leftBtn.title = leftOpen ? 'Close game panel' : 'Open game panel';
-    } else {
-      leftBtn.textContent = leftCollapsed ? '›' : '‹';
-      leftBtn.setAttribute('aria-expanded', leftCollapsed ? 'false' : 'true');
-      leftBtn.setAttribute('aria-label', leftCollapsed ? 'Expand left sidebar' : 'Collapse left sidebar');
-      leftBtn.title = leftCollapsed ? 'Expand left sidebar' : 'Collapse left sidebar';
-    }
-  }
-
-  if (rightBtn) {
-    if (mobile) {
-      const rightOpen = !rightCollapsed;
-      rightBtn.textContent = rightOpen ? '×' : '☰';
-      rightBtn.setAttribute('aria-expanded', rightOpen ? 'true' : 'false');
-      rightBtn.setAttribute('aria-label', rightOpen ? 'Close tickets and train cars panel' : 'Open tickets and train cars panel');
-      rightBtn.title = rightOpen ? 'Close tickets and train cars panel' : 'Open tickets and train cars panel';
-    } else {
-      rightBtn.textContent = rightCollapsed ? '‹' : '›';
-      rightBtn.setAttribute('aria-expanded', rightCollapsed ? 'false' : 'true');
-      rightBtn.setAttribute('aria-label', rightCollapsed ? 'Expand right sidebar' : 'Collapse right sidebar');
-      rightBtn.title = rightCollapsed ? 'Expand right sidebar' : 'Collapse right sidebar';
-    }
-  }
-}
-
-function toggleSidebar(side) {
-  const bodyEl = document.body;
-  const mobile = bodyEl.classList.contains('mobile-sidebar-mode');
-
-  if (mobile) {
-    if (side === 'left') {
-      const opening = bodyEl.classList.contains('left-sidebar-collapsed');
-      if (opening) {
-        bodyEl.classList.remove('left-sidebar-collapsed');
-        bodyEl.classList.add('right-sidebar-collapsed');
-      } else {
-        bodyEl.classList.add('left-sidebar-collapsed');
-      }
-    } else if (side === 'right') {
-      const opening = bodyEl.classList.contains('right-sidebar-collapsed');
-      if (opening) {
-        bodyEl.classList.remove('right-sidebar-collapsed');
-        bodyEl.classList.add('left-sidebar-collapsed');
-      } else {
-        bodyEl.classList.add('right-sidebar-collapsed');
-      }
-    }
-  } else {
-    if (side === 'left') {
-      bodyEl.classList.toggle('left-sidebar-collapsed');
-    } else if (side === 'right') {
-      bodyEl.classList.toggle('right-sidebar-collapsed');
-    }
-  }
-
-  if (mobile && (!bodyEl.classList.contains('left-sidebar-collapsed') || !bodyEl.classList.contains('right-sidebar-collapsed'))) {
-    setTrainCardTrayOpen(false);
-  }
-
-  applySidebarState();
-  setTimeout(() => {
-    if (map && typeof map.invalidateSize === 'function') {
-      map.invalidateSize(true);
-      if (typeof map._onResize === 'function') {
-        map._onResize();
-      }
-    }
-    refreshAllTrainOverlays();
-  }, 260);
-}
-
 
 document.getElementById('drawTicketsBtn').addEventListener('click', drawTickets);
 document.getElementById('keepSelectedBtn').addEventListener('click', keepSelectedTickets);
