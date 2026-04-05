@@ -352,7 +352,7 @@ const controller = createGameController({
   updateDrawControls,
   clearStationGuides,
 
-  queuePersist
+  queuePersist,
 });
 
 function computeTrainCarStoreCounts() {
