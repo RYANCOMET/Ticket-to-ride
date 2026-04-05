@@ -16,7 +16,7 @@ import {
   renderOffer as renderOfferModule,
   renderHand as renderHandModule,
   updateDrawControls as updateDrawControlsModule,
-  drawTickets as drawTicketsModule,
+  ets as etsModule,
   keepSelectedTickets as keepSelectedTicketsModule
 } from "./game/tickets.js";
 
@@ -168,12 +168,7 @@ function updateDrawControls() {
 }
 
 function drawTickets() {
-  return drawTicketsModule({
-    gameState,
-    renderOffer,
-    renderHand,
-    queuePersist
-  });
+  controller.onDrawTickets();
 }
 
 function keepSelectedTickets() {
