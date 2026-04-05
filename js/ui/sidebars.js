@@ -1,30 +1,42 @@
-export let isMobileSidebarMode = false;
+export const MOBILE_SIDEBAR_BREAKPOINT = 950;
 
-export function syncMobileSidebarMode() {
-  isMobileSidebarMode = window.innerWidth <= 950;
+let mobileMode = false;
+let currentPanel = "map";
+
+function getEls() {
+  return {
+    sidebar: document.getElementById("sidebar"),
+    ticketSidebar: document.getElementById("ticketSidebar"),
+    mapEl: document.getElementById("map")
+  };
 }
 
-export function applySidebarState(sidebar, ticketSidebar, mapEl) {
-  if (!isMobileSidebarMode) {
+export function syncMobileSidebarMode() {
+  mobileMode =
+    window.innerWidth <= MOBILE_SIDEBAR_BREAKPOINT &&
+    window.innerHeight > window.innerWidth;
+  return mobileMode;
+}
+
+export function applySidebarState() {
+  const { sidebar, ticketSidebar, mapEl } = getEls();
+  if (!sidebar || !ticketSidebar || !mapEl) return;
+
+  if (!mobileMode) {
     sidebar.style.display = "";
     ticketSidebar.style.display = "";
     mapEl.style.display = "";
     return;
   }
 
-  sidebar.style.display = "none";
-  ticketSidebar.style.display = "none";
-  mapEl.style.display = "block";
+  sidebar.style.display = currentPanel === "left" ? "block" : "none";
+  ticketSidebar.style.display = currentPanel === "right" ? "block" : "none";
+  mapEl.style.display = currentPanel === "map" ? "block" : "none";
 }
 
-export function toggleSidebar(sidebar, ticketSidebar, mapEl, target) {
-  if (!isMobileSidebarMode) return;
+export function toggleSidebar(target) {
+  if (!mobileMode) return;
 
-  sidebar.style.display = "none";
-  ticketSidebar.style.display = "none";
-  mapEl.style.display = "none";
-
-  if (target === "left") sidebar.style.display = "block";
-  if (target === "right") ticketSidebar.style.display = "block";
-  if (target === "map") mapEl.style.display = "block";
+  currentPanel = target;
+  applySidebarState();
 }
