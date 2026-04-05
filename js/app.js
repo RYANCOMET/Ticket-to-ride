@@ -8,6 +8,7 @@ import {
   toggleSidebar
 } from "./ui/sidebars.js";   
 import { buildStations } from "./map/stations.js";
+import { buildRoutes } from "./map/routes.js";
 const SUPABASE_URL = 'https://iloeoccqvxwwlmgbbweu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlsb2VvY2Nxdnh3d2xtZ2Jid2V1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzg3NDIsImV4cCI6MjA5MDY1NDc0Mn0.PseTgg81ZTeeIohlILmgHLNx31KlzphubwVi6strXPw';
 const GAME_ID = 'europe-main';
@@ -1256,30 +1257,6 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
-function buildRoutes() {
-  routesData.features.forEach(feature => {
-    const outerCoords = feature.geometry.coordinates[0].map(([lng, lat]) => [lat, lng]);
-    const innerCoords = insetPolygon(outerCoords, 0.88, 0.72);
-    const shineCoords = topEdgePolygon(innerCoords, 0.22);
-
-    const outer = L.polygon(outerCoords, { interactive: true, smoothFactor: 0.5 });
-    const inner = L.polygon(innerCoords, { interactive: false, smoothFactor: 0.5 });
-    const shine = shineCoords ? L.polygon(shineCoords, { interactive: false, smoothFactor: 0.5 }) : null;
-
-    const entry = { feature, outer, inner, shine, bounds: outer.getBounds(), trainMarker: null };
-    routeLayersById[feature.properties.id] = entry;
-
-    outer.on('click', () => toggleRoute(entry));
-    updateRouteStyle(entry);
-    bindRoutePopup(entry);
-    syncTrainOverlay(entry);
-
-    outer.addTo(routeLayerGroup);
-    inner.addTo(routeLayerGroup);
-    if (shine) shine.addTo(routeLayerGroup);
-  });
-}
-
 function fitToData() {
   const bounds = L.latLngBounds([]);
   Object.values(routeLayersById).forEach(entry => bounds.extend(entry.bounds));
@@ -1594,7 +1571,18 @@ setTrainCardTrayOpen(false);
 
 initAccordions();
 registerRouteGroups();
-buildRoutes();
+buildRoutes({
+  routesData,
+  routeLayerGroup,
+  routeLayersById,
+  insetPolygon,
+  topEdgePolygon,
+  updateRouteStyle,
+  bindRoutePopup,
+  syncTrainOverlay,
+  toggleRoute,
+  L
+});
 buildStations({
   stationsData,
   stationLayerGroup,
