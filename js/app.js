@@ -16,7 +16,7 @@ import {
   renderOffer as renderOfferModule,
   renderHand as renderHandModule,
   updateDrawControls as updateDrawControlsModule,
-  tickets as ticketsModule,
+  drawTickets as drawTicketsModule,
   keepSelectedTickets as keepSelectedTicketsModule
 } from "./game/tickets.js";
 
