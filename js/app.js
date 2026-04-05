@@ -1541,7 +1541,15 @@ applySidebarState();
 setTrainCardTrayOpen(false);
 
 initAccordions();
-registerRouteGroups();
+registerRouteGroups({
+  routesData,
+  routeGroups,
+  segmentToRouteKey,
+  parseRouteKey,
+  parseRouteLength,
+  parseRouteEndpoints,
+  parseRouteClaimType
+});
 buildRoutes({
   routesData,
   routeLayerGroup,
