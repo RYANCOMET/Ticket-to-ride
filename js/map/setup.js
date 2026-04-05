@@ -29,7 +29,9 @@ export function registerRouteGroups({
 }
 
 export function fitToData({ map, routeLayersById, L }) {
-  const layers = Object.values(routeLayersById);
+  const layers = Object.values(routeLayersById)
+    .map(entry => entry.outer)
+    .filter(Boolean);
 
   if (!layers.length) return;
 
