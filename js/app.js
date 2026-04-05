@@ -10,6 +10,13 @@ import {
 import { buildStations } from "./map/stations.js";
 import { buildRoutes } from "./map/routes.js";
 import { registerRouteGroups, fitToData } from "./map/setup.js";
+import {
+  renderOffer as renderOfferModule,
+  renderHand as renderHandModule,
+  updateDrawControls as updateDrawControlsModule,
+  drawTickets as drawTicketsModule,
+  keepSelectedTickets as keepSelectedTicketsModule
+} from "./game/tickets.js";
 const SUPABASE_URL = 'https://iloeoccqvxwwlmgbbweu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlsb2VvY2Nxdnh3d2xtZ2Jid2V1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzg3NDIsImV4cCI6MjA5MDY1NDc0Mn0.PseTgg81ZTeeIohlILmgHLNx31KlzphubwVi6strXPw';
 const GAME_ID = 'europe-main';
@@ -62,6 +69,58 @@ let persistTimer = null;
 let selectedOfferIndexes = new Set();
 let previewVisibleTrainCardId = null;
 let isTrainCardTrayOpen = false;
+
+function renderOffer() {
+  return renderOfferModule({
+    gameState,
+    selectedOfferIndexesRef: () => selectedOfferIndexes,
+    updateSelectedOfferIndexes: next => { selectedOfferIndexes = next; },
+    updateDrawControls,
+    renderHand,
+    escapeHtml
+  });
+}
+
+function renderHand() {
+  return renderHandModule({
+    gameState,
+    buildClaimedGraph,
+    getHighlightedStationNames,
+    areCitiesConnected,
+    clearStationGuides,
+    updateStationStyles,
+    updateStats,
+    selectedGuideStationNameRef: () => selectedGuideStationName,
+    escapeHtml
+  });
+}
+
+function updateDrawControls() {
+  return updateDrawControlsModule({
+    gameState,
+    selectedOfferIndexes
+  });
+}
+
+function drawTickets() {
+  return drawTicketsModule({
+    gameState,
+    renderOffer,
+    renderHand,
+    queuePersist
+  });
+}
+
+function keepSelectedTickets() {
+  return keepSelectedTicketsModule({
+    gameState,
+    selectedOfferIndexes,
+    clearSelectedOfferIndexes: () => { selectedOfferIndexes = new Set(); },
+    renderOffer,
+    renderHand,
+    queuePersist
+  });
+}
 
 function setSyncStatus(kind, message) {
   const pill = document.getElementById('syncStatus');
@@ -1292,111 +1351,6 @@ function toggleRoute(entry) {
   renderTrainHand();
   updateStats();
   queuePersist('Route updated');
-}
-
-function renderOffer() {
-  const container = document.getElementById('offerContainer');
-  container.innerHTML = '';
-  selectedOfferIndexes = new Set();
-  if (!gameState.tickets_offer.length) {
-    container.className = 'ticket-list empty-state';
-    container.textContent = 'No routes drawn yet.';
-    document.getElementById('keepSelectedBtn').disabled = true;
-    updateDrawControls();
-    return;
-  }
-  container.className = 'ticket-list';
-  gameState.tickets_offer.forEach((ticket, index) => {
-    const card = document.createElement('div');
-    card.className = 'ticket-card';
-    card.innerHTML = `
-      <label>
-        <input type="checkbox" data-offer-index="${index}">
-        <div>
-          <div class="ticket-route">${escapeHtml(ticket.start)} → ${escapeHtml(ticket.end)}</div>
-          <div class="ticket-meta"><span>${ticket.points} point${ticket.points === 1 ? '' : 's'}</span><span>Keep at least 1</span></div>
-        </div>
-      </label>
-    `;
-    container.appendChild(card);
-  });
-  container.querySelectorAll('input[type="checkbox"]').forEach(box => {
-    box.addEventListener('change', () => {
-      const idx = Number(box.dataset.offerIndex);
-      if (box.checked) selectedOfferIndexes.add(idx);
-      else selectedOfferIndexes.delete(idx);
-      document.getElementById('keepSelectedBtn').disabled = selectedOfferIndexes.size < 1;
-    });
-  });
-  document.getElementById('keepSelectedBtn').disabled = true;
-  updateDrawControls();
-}
-
-function renderHand() {
-  const container = document.getElementById('handContainer');
-  container.innerHTML = '';
-  if (!gameState.tickets_hand.length) {
-    container.className = 'ticket-list empty-state';
-    container.textContent = 'No tickets in hand.';
-    clearStationGuides();
-    updateStationStyles();
-    updateStats();
-    return;
-  }
-  container.className = 'ticket-list';
-  const graph = buildClaimedGraph();
-  const highlightedNames = getHighlightedStationNames();
-  if (selectedGuideStationName && !highlightedNames.has(selectedGuideStationName)) {
-    clearStationGuides();
-  }
-  gameState.tickets_hand.forEach(ticket => {
-    const complete = areCitiesConnected(ticket.start, ticket.end, graph);
-    const card = document.createElement('div');
-    card.className = 'ticket-card ' + (complete ? 'ticket-complete' : 'ticket-incomplete');
-    card.innerHTML = `
-      <div class="ticket-route">${escapeHtml(ticket.start)} → ${escapeHtml(ticket.end)}</div>
-      <div class="ticket-meta"><span>${ticket.points} point${ticket.points === 1 ? '' : 's'}</span><span>${complete ? 'Complete' : 'Not complete yet'}</span></div>
-      <div class="ticket-status">${complete ? 'Scoring now.' : 'Highlighted map nodes show incomplete ticket endpoints. Click one of those larger nodes to draw a guide line.'}</div>
-    `;
-    container.appendChild(card);
-  });
-  updateStationStyles();
-  updateStats();
-}
-
-function updateDrawControls() {
-  const drawBtn = document.getElementById('drawTicketsBtn');
-  const keepBtn = document.getElementById('keepSelectedBtn');
-  const hasOffer = gameState.tickets_offer.length > 0;
-  drawBtn.disabled = hasOffer || gameState.tickets_deck_remaining.length === 0;
-  keepBtn.disabled = !hasOffer || selectedOfferIndexes.size < 1;
-  document.getElementById('drawNotice').textContent = hasOffer
-    ? 'Choose at least 1 route to keep before drawing again.'
-    : gameState.tickets_deck_remaining.length === 0
-      ? 'No routes left in the deck.'
-      : `Deck remaining: ${gameState.tickets_deck_remaining.length}`;
-}
-
-function drawTickets() {
-  if (gameState.tickets_offer.length) return;
-  const drawCount = Math.min(5, gameState.tickets_deck_remaining.length);
-  if (!drawCount) return;
-  gameState.tickets_offer = gameState.tickets_deck_remaining.slice(0, drawCount);
-  gameState.tickets_deck_remaining = gameState.tickets_deck_remaining.slice(drawCount);
-  renderOffer();
-  renderHand();
-  queuePersist('Tickets drawn');
-}
-
-function keepSelectedTickets() {
-  if (!gameState.tickets_offer.length || selectedOfferIndexes.size < 1) return;
-  const kept = gameState.tickets_offer.filter((_, index) => selectedOfferIndexes.has(index));
-  gameState.tickets_hand = gameState.tickets_hand.concat(kept);
-  gameState.tickets_offer = [];
-  selectedOfferIndexes = new Set();
-  renderOffer();
-  renderHand();
-  queuePersist('Tickets kept');
 }
 
 function resetBoard() {
