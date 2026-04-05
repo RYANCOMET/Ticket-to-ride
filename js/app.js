@@ -80,10 +80,6 @@ import {
 
 import { createGameSync } from "./game/game-sync.js";
 
-const sync = createGameSync({
-  sbClient
-  gameId: GAME_ID,
-});
 const SUPABASE_URL = 'https://iloeoccqvxwwlmgbbweu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlsb2VvY2Nxdnh3d2xtZ2Jid2V1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzg3NDIsImV4cCI6MjA5MDY1NDc0Mn0.PseTgg81ZTeeIohlILmgHLNx31KlzphubwVi6strXPw';
 const GAME_ID = 'europe-main';
@@ -326,7 +322,6 @@ function getPreviewTrainCard() {
 }
 
 const controller = createGameController({
-  // ---- STATE ACCESS ----
   getGameState: () => gameState,
   setGameState: (next) => { gameState = next; },
 
@@ -338,7 +333,6 @@ const controller = createGameController({
   getPreviewVisibleTrainCardId: () => previewVisibleTrainCardId,
   setPreviewVisibleTrainCardId: (next) => { previewVisibleTrainCardId = next; },
 
-  // ---- ROUTE SYSTEM ----
   routeGroups,
   routeLayersById,
   segmentToRouteKey,
@@ -347,7 +341,6 @@ const controller = createGameController({
   bindRoutePopup,
   refreshAllTrainOverlays,
 
-  // ---- RENDER FUNCTIONS ----
   renderOffer,
   renderHand,
   renderVisibleTrainCards,
@@ -359,29 +352,7 @@ const controller = createGameController({
   updateDrawControls,
   clearStationGuides,
 
-  // ---- PERSIST ----
   queuePersist
-  sbClient,
-  gameId: GAME_ID,
-  gameName: GAME_NAME,
-
-  getGameState: () => gameState,
-  setGameState: (next) => { gameState = next; },
-  createNewGameState,
-  normalizeState,
-
-  serializeTrainStore,
-  getPreviewTrainCard,
-
-  renderLoadedState: applyStateToVisuals,
-  updateStats,
-  updateDrawControls,
-
-  getLastKnownUpdatedAt: () => lastKnownUpdatedAt,
-  setLastKnownUpdatedAt: (next) => { lastKnownUpdatedAt = next; },
-
-  getPersistTimer: () => persistTimer,
-  setPersistTimer: (next) => { persistTimer = next; }
 });
 
 function computeTrainCarStoreCounts() {
@@ -1120,8 +1091,31 @@ function escapeHtml(value) {
 }
 
 function applyStateToVisuals() {
-  return controller.renderAll()
+  return controller.renderAll()  
 }
+const sync = createGameSync({
+  sbClient,
+  gameId: GAME_ID,
+  gameName: GAME_NAME,
+
+  getGameState: () => gameState,
+  setGameState: (next) => { gameState = next; },
+  createNewGameState,
+  normalizeState,
+
+  serializeTrainStore,
+  getPreviewTrainCard,
+
+  renderLoadedState: applyStateToVisuals,
+  updateStats,
+  updateDrawControls,
+
+  getLastKnownUpdatedAt: () => lastKnownUpdatedAt,
+  setLastKnownUpdatedAt: (next) => { lastKnownUpdatedAt = next; },
+
+  getPersistTimer: () => persistTimer,
+  setPersistTimer: (next) => { persistTimer = next; }
+});
 
 function toggleRoute(entry) {
   return controller.onToggleRoute(entry);
