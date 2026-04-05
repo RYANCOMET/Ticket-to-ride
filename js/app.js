@@ -1526,17 +1526,42 @@ buildStations({
   escapeHtml,
   L
 });
+fitToData({
+  map,
+  routeLayersById,
+  L
+});
+
+setTimeout(() => {
+  map.invalidateSize();
+  fitToData({
+    map,
+    routeLayersById,
+    L
+  });
+}, 0);
+
 map.whenReady(async () => {
+  map.invalidateSize();
+  fitToData({
+    map,
+    routeLayersById,
+    L
+  });
   refreshAllTrainOverlays();
   updateStats();
   updateDrawControls();
   await loadGameStateFromServer();
 });
+
 map.on('zoomend moveend resize', refreshAllTrainOverlays);
 window.addEventListener('resize', () => {
   syncMobileSidebarMode();
   applySidebarState();
-  refreshAllTrainOverlays();
+  setTimeout(() => {
+    map.invalidateSize();
+    refreshAllTrainOverlays();
+  }, 0);
 });
 window.addEventListener('focus', pollForRemoteUpdates);
 setInterval(pollForRemoteUpdates, 5000);
