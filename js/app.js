@@ -1531,6 +1531,11 @@ fitToData({
   routeLayersById,
   L
 });
+fitToData({
+  map,
+  routeLayersById,
+  L
+});
 
 setTimeout(() => {
   map.invalidateSize();
