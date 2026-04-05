@@ -1590,12 +1590,6 @@ async function pollForRemoteUpdates() {
   }
 }
 
-const MOBILE_SIDEBAR_BREAKPOINT = 950;
-
-function isMobileSidebarMode() {
-  return window.innerWidth <= MOBILE_SIDEBAR_BREAKPOINT && window.innerHeight > window.innerWidth;
-}
-
 document.getElementById('drawTicketsBtn').addEventListener('click', drawTickets);
 document.getElementById('keepSelectedBtn').addEventListener('click', keepSelectedTickets);
 document.getElementById('resetBoardBtn').addEventListener('click', resetBoard);
@@ -1612,7 +1606,9 @@ if (leftSidebarToggle) {
 if (rightSidebarToggle) {
   rightSidebarToggle.addEventListener('click', () => toggleSidebar('right'));
 }
+
 syncMobileSidebarMode();
+applySidebarState();
 setTrainCardTrayOpen(false);
 
 initAccordions();
@@ -1629,6 +1625,7 @@ map.whenReady(async () => {
 map.on('zoomend moveend resize', refreshAllTrainOverlays);
 window.addEventListener('resize', () => {
   syncMobileSidebarMode();
+  applySidebarState();
   refreshAllTrainOverlays();
 });
 window.addEventListener('focus', pollForRemoteUpdates);
