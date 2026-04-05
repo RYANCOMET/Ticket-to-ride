@@ -31,6 +31,13 @@ import {
   getGuideDestinationsForStation as getGuideDestinationsForStationModule
 } from "./game/scoring.js";
 
+import {
+  clearStationGuides as clearStationGuidesModule,
+  drawStationGuidesFrom as drawStationGuidesFromModule,
+  handleStationClick as handleStationClickModule,
+  updateStationStyles as updateStationStylesModule
+} from "./map/station-guides.js";
+
 const SUPABASE_URL = 'https://iloeoccqvxwwlmgbbweu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlsb2VvY2Nxdnh3d2xtZ2Jid2V1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzg3NDIsImV4cCI6MjA5MDY1NDc0Mn0.PseTgg81ZTeeIohlILmgHLNx31KlzphubwVi6strXPw';
 const GAME_ID = 'europe-main';
@@ -1155,65 +1162,41 @@ function getGuideDestinationsForStation(stationName) {
 }
 
 function clearStationGuides() {
-  stationGuideLayerGroup.clearLayers();
-  selectedGuideStationName = null;
-  updateStationStyles();
+  return clearStationGuidesModule({
+    stationGuideLayerGroup,
+    setSelectedGuideStationName: value => { selectedGuideStationName = value; },
+    updateStationStyles
+  });
 }
 
 function drawStationGuidesFrom(stationName) {
-  stationGuideLayerGroup.clearLayers();
-  const fromCoords = stationCoordsByName[stationName];
-  if (!fromCoords) {
-    selectedGuideStationName = null;
-    updateStationStyles();
-    return;
-  }
-  const destinations = getGuideDestinationsForStation(stationName);
-  if (!destinations.length) {
-    selectedGuideStationName = null;
-    updateStationStyles();
-    return;
-  }
-  selectedGuideStationName = stationName;
-  destinations.forEach(destName => {
-    const toCoords = stationCoordsByName[destName];
-    if (!toCoords) return;
-    const line = L.polyline([fromCoords, toCoords], {
-      color: '#f0d58a',
-      weight: 4,
-      opacity: 0.9,
-      dashArray: '10 10',
-      lineCap: 'round',
-      className: 'station-guide-line'
-    });
-    line.bindPopup(`<div class="popup-title">${escapeHtml(stationName)} → ${escapeHtml(destName)}</div><div>Needed for an incomplete route ticket.</div>`);
-    line.addTo(stationGuideLayerGroup);
+  return drawStationGuidesFromModule({
+    stationName,
+    stationGuideLayerGroup,
+    stationCoordsByName,
+    getGuideDestinationsForStation,
+    setSelectedGuideStationName: value => { selectedGuideStationName = value; },
+    updateStationStyles,
+    escapeHtml,
+    L
   });
-  updateStationStyles();
 }
 
 function handleStationClick(stationName) {
-  const highlighted = getHighlightedStationNames();
-  if (!highlighted.has(stationName)) return;
-  if (selectedGuideStationName === stationName) {
-    clearStationGuides();
-    return;
-  }
-  drawStationGuidesFrom(stationName);
+  return handleStationClickModule({
+    stationName,
+    getHighlightedStationNames,
+    selectedGuideStationName,
+    clearStationGuides,
+    drawStationGuidesFrom
+  });
 }
 
 function updateStationStyles() {
-  const highlighted = getHighlightedStationNames();
-  Object.entries(stationLayersByName).forEach(([name, layer]) => {
-    const isHighlighted = highlighted.has(name);
-    const isSelected = selectedGuideStationName === name;
-    layer.setStyle({
-      radius: isSelected ? 10 : (isHighlighted ? 8 : 5),
-      color: isSelected ? '#f7eed0' : (isHighlighted ? '#f0d58a' : '#7d3e12'),
-      weight: isSelected ? 3 : 2,
-      fillColor: isSelected ? '#8b5f1b' : (isHighlighted ? '#f0c36c' : '#d07a34'),
-      fillOpacity: 0.96
-    });
+  return updateStationStylesModule({
+    stationLayersByName,
+    getHighlightedStationNames,
+    selectedGuideStationName
   });
 }
 
@@ -1277,6 +1260,7 @@ function applyStateToVisuals() {
     bindRoutePopup(entry);
   });
   clearStationGuides();
+  
   previewVisibleTrainCardId = null;
   renderOffer();
   renderHand();
