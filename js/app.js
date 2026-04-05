@@ -1103,39 +1103,7 @@ function applyStateToVisuals() {
 }
 
 function toggleRoute(entry) {
-  const routeKey = segmentToRouteKey[entry.feature.properties.id];
-  const group = routeGroups[routeKey];
-  if (!group) return;
-
-  if (isRouteComplete(routeKey)) {
-    const segmentSet = new Set(group.segmentIds);
-    gameState.claimed_segments = gameState.claimed_segments.filter(item => !segmentSet.has(item));
-    if (gameState.route_claim_costs && gameState.route_claim_costs[routeKey]) {
-      delete gameState.route_claim_costs[routeKey];
-    }
-  } else {
-    const offer = getRouteClaimOffer(routeKey);
-    if (!offer.canAfford) {
-      window.alert('You cannot claim this connection yet. ' + (offer.reason || 'Not enough train cars.'));
-      return;
-    }
-    gameState.claimed_segments = Array.from(new Set([...gameState.claimed_segments, ...group.segmentIds]));
-    gameState.route_claim_costs = gameState.route_claim_costs || {};
-    gameState.route_claim_costs[routeKey] = offer.spendPlan;
-  }
-
-  group.segmentIds.forEach(segmentId => {
-    const routeEntry = routeLayersById[segmentId];
-    if (routeEntry) {
-      updateRouteStyle(routeEntry);
-      bindRoutePopup(routeEntry);
-    }
-  });
-  Object.values(routeLayersById).forEach(e => bindRoutePopup(e));
-  refreshAllTrainOverlays();
-  renderTrainHand();
-  updateStats();
-  queuePersist('Route updated');
+  return controller.onToggleRoute(entry);
 }
 
 function resetBoard() {
