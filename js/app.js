@@ -172,14 +172,7 @@ function drawTickets() {
 }
 
 function keepSelectedTickets() {
-  return keepSelectedTicketsModule({
-    gameState,
-    selectedOfferIndexes,
-    clearSelectedOfferIndexes: () => { selectedOfferIndexes = new Set(); },
-    renderOffer,
-    renderHand,
-    queuePersist
-  });
+  return controller.onKeepSelectedTickets();
 }
 
 function setSyncStatus(kind, message) {
@@ -1146,27 +1139,11 @@ function toggleRoute(entry) {
 }
 
 function resetBoard() {
-  if (!confirm('Reset the board, current offer, hand, and scores? The remaining deck will stay as it is.')) return;
-  gameState.claimed_segments = [];
-  gameState.route_claim_costs = {};
-  gameState.tickets_offer = [];
-  gameState.tickets_hand = [];
-  gameState.active_challenge_card = null;
-  gameState.completed_challenge_cards = [];
-  previewVisibleTrainCardId = null;
-  selectedOfferIndexes = new Set();
-  applyStateToVisuals();
-  updateDrawControls();
-  queuePersist('Board reset');
+  return controller.onResetBoard();
 }
 
 function newGame() {
-  if (!confirm('Start a completely new game and reshuffle the ticket deck?')) return;
-  gameState = createNewGameState();
-  selectedOfferIndexes = new Set();
-  applyStateToVisuals();
-  updateDrawControls();
-  queuePersist('New game');
+  return controller.onNewGame();
 }
 
 async function persistGameState(reason = 'State saved') {
