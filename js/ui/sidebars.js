@@ -3,8 +3,12 @@ export const MOBILE_SIDEBAR_BREAKPOINT = 950;
 let mobileMode = false;
 let currentPanel = "map";
 
+let desktopLeftVisible = true;
+let desktopRightVisible = true;
+
 function getEls() {
   return {
+    body: document.body,
     sidebar: document.getElementById("sidebar"),
     ticketSidebar: document.getElementById("ticketSidebar"),
     mapEl: document.getElementById("map")
@@ -19,24 +23,44 @@ export function syncMobileSidebarMode() {
 }
 
 export function applySidebarState() {
-  const { sidebar, ticketSidebar, mapEl } = getEls();
-  if (!sidebar || !ticketSidebar || !mapEl) return;
+  const { body, sidebar, ticketSidebar, mapEl } = getEls();
+  if (!body || !sidebar || !ticketSidebar || !mapEl) return;
 
-  if (!mobileMode) {
-    sidebar.style.display = "";
-    ticketSidebar.style.display = "";
-    mapEl.style.display = "";
+  if (mobileMode) {
+    sidebar.style.display = currentPanel === "left" ? "block" : "none";
+    ticketSidebar.style.display = currentPanel === "right" ? "block" : "none";
+    mapEl.style.display = currentPanel === "map" ? "block" : "none";
+    body.style.gridTemplateColumns = "1fr";
     return;
   }
 
-  sidebar.style.display = currentPanel === "left" ? "block" : "none";
-  ticketSidebar.style.display = currentPanel === "right" ? "block" : "none";
-  mapEl.style.display = currentPanel === "map" ? "block" : "none";
+  sidebar.style.display = desktopLeftVisible ? "" : "none";
+  ticketSidebar.style.display = desktopRightVisible ? "" : "none";
+  mapEl.style.display = "";
+
+  if (desktopLeftVisible && desktopRightVisible) {
+    body.style.gridTemplateColumns = "var(--left-sidebar-width) minmax(0, 1fr) var(--right-sidebar-width)";
+  } else if (desktopLeftVisible && !desktopRightVisible) {
+    body.style.gridTemplateColumns = "var(--left-sidebar-width) minmax(0, 1fr)";
+  } else if (!desktopLeftVisible && desktopRightVisible) {
+    body.style.gridTemplateColumns = "minmax(0, 1fr) var(--right-sidebar-width)";
+  } else {
+    body.style.gridTemplateColumns = "minmax(0, 1fr)";
+  }
 }
 
 export function toggleSidebar(target) {
-  if (!mobileMode) return;
+  if (mobileMode) {
+    currentPanel = currentPanel === target ? "map" : target;
+    applySidebarState();
+    return;
+  }
 
-  currentPanel = target;
+  if (target === "left") {
+    desktopLeftVisible = !desktopLeftVisible;
+  } else if (target === "right") {
+    desktopRightVisible = !desktopRightVisible;
+  }
+
   applySidebarState();
 }
