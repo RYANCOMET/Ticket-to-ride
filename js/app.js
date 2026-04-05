@@ -48,6 +48,35 @@ import {
   describeSpendPlan as describeSpendPlanModule
 } from "./game/route-claims.js";
 
+import {
+  formatChallengeReward as formatChallengeRewardModule,
+  randomTrainCardKey as randomTrainCardKeyModule,
+  getChallengePool as getChallengePoolModule,
+  createChallengeForType as createChallengeForTypeModule,
+  createTrainCard as createTrainCardModule,
+  sanitizeTrainCard as sanitizeTrainCardModule,
+  countRainbowCards as countRainbowCardsModule,
+  dealFreshVisibleTrainCards as dealFreshVisibleTrainCardsModule,
+  normalizeVisibleTrainCards as normalizeVisibleTrainCardsModule,
+  normalizeTrainHandCards as normalizeTrainHandCardsModule,
+  normalizeCompletedChallengeCards as normalizeCompletedChallengeCardsModule,
+  reshuffleVisibleTrainCardsIfNeeded as reshuffleVisibleTrainCardsIfNeededModule,
+  getPreviewTrainCard as getPreviewTrainCardModule,
+  computeTrainCarStoreCounts as computeTrainCarStoreCountsModule,
+  setTrainCardTrayOpen as setTrainCardTrayOpenModule,
+  openTrainCardTray as openTrainCardTrayModule,
+  closeTrainCardTray as closeTrainCardTrayModule,
+  toggleTrainCardTray as toggleTrainCardTrayModule,
+  renderVisibleTrainCards as renderVisibleTrainCardsModule,
+  renderActiveChallengeCard as renderActiveChallengeCardModule,
+  renderTrainHand as renderTrainHandModule,
+  renderCompletedChallenges as renderCompletedChallengesModule,
+  previewVisibleTrainCard as previewVisibleTrainCardModule,
+  clearPreviewedChallenge as clearPreviewedChallengeModule,
+  claimPreviewedChallenge as claimPreviewedChallengeModule,
+  completeActiveChallenge as completeActiveChallengeModule
+} from "./game/train-cards.js";
+
 const SUPABASE_URL = 'https://iloeoccqvxwwlmgbbweu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlsb2VvY2Nxdnh3d2xtZ2Jid2V1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzg3NDIsImV4cCI6MjA5MDY1NDc0Mn0.PseTgg81ZTeeIohlILmgHLNx31KlzphubwVi6strXPw';
 const GAME_ID = 'europe-main';
@@ -185,391 +214,231 @@ function normalizeTicket(ticket) {
 
 
 
-function randomTrainCardKey() {
-  return TRAIN_CARD_TYPES[Math.floor(Math.random() * TRAIN_CARD_TYPES.length)].key;
-}
-
-function nextTrainCardId() {
-  trainCardIdCounter += 1;
-  return 'train-card-' + trainCardIdCounter;
-}
-
-
 function formatChallengeReward(value) {
-  if (value === null || value === undefined || value === '') return '—';
-  return String(value);
+  return formatChallengeRewardModule(value);
+}
+
+function randomTrainCardKey() {
+  return randomTrainCardKeyModule(TRAIN_CARD_TYPES);
 }
 
 function getChallengePool(typeKey) {
-  if (typeKey === 'rainbow') {
-    return TRAIN_CARD_STANDARD_KEYS.flatMap(key => (TRAIN_CARD_CHALLENGE_DECK[key] || []).map(card => ({ ...card, source_type: key })));
-  }
-  return (TRAIN_CARD_CHALLENGE_DECK[typeKey] || []).map(card => ({ ...card, source_type: typeKey }));
+  return getChallengePoolModule(typeKey, TRAIN_CARD_STANDARD_KEYS, TRAIN_CARD_CHALLENGE_DECK);
 }
 
 function createChallengeForType(typeKey) {
-  if (typeKey === 'rainbow') {
-    return {
-      name: 'Challenge name placeholder',
-      description: 'Do a chalange from the couples adventure book',
-      reward: 1,
-      locale: 'Any'
-    };
-  }
-  const pool = getChallengePool(typeKey);
-  if (!pool.length) {
-    return {
-      name: 'Challenge name placeholder',
-      description: 'Challenge details go here.',
-      reward: '—',
-      locale: 'Any'
-    };
-  }
-  const picked = pool[Math.floor(Math.random() * pool.length)];
-  return {
-    name: picked.name || 'Challenge name placeholder',
-    description: picked.description || '',
-    reward: picked.reward ?? '',
-    locale: picked.locale || 'Any'
-  };
+  return createChallengeForTypeModule(typeKey, TRAIN_CARD_STANDARD_KEYS, TRAIN_CARD_CHALLENGE_DECK);
 }
 
-function createTrainCard(typeKey) {
-  const safeType = TRAIN_CARD_LOOKUP[typeKey] ? typeKey : 'rainbow';
-  return {
-    id: nextTrainCardId(),
-    type_key: safeType,
-    challenge: createChallengeForType(safeType)
-  };
+function createTrainCard(typeKey, forceType = false) {
+  return createTrainCardModule({
+    typeKey: forceType ? typeKey : (TRAIN_CARD_LOOKUP[typeKey] ? typeKey : "rainbow"),
+    TRAIN_CARD_LOOKUP,
+    TRAIN_CARD_STANDARD_KEYS,
+    TRAIN_CARD_CHALLENGE_DECK,
+    getTrainCardIdCounter: () => trainCardIdCounter,
+    setTrainCardIdCounter: value => { trainCardIdCounter = value; }
+  });
 }
 
-function sanitizeTrainCard(raw, fallbackType = 'rainbow') {
-  const typeKey = TRAIN_CARD_LOOKUP[String(raw?.type_key)] ? String(raw.type_key) : fallbackType;
-  const fallbackChallenge = createChallengeForType(typeKey);
-  return {
-    id: raw?.id ? String(raw.id) : nextTrainCardId(),
-    type_key: typeKey,
-    challenge: {
-      name: raw?.challenge?.name || fallbackChallenge.name || 'Challenge name placeholder',
-      description: raw?.challenge?.description || fallbackChallenge.description || '',
-      reward: typeKey === 'rainbow' ? 1 : (raw?.challenge?.reward ?? fallbackChallenge.reward ?? ''),
-      locale: raw?.challenge?.locale || fallbackChallenge.locale || 'Any'
-    }
-  };
+function sanitizeTrainCard(raw, fallbackType = "rainbow") {
+  return sanitizeTrainCardModule({
+    raw,
+    fallbackType,
+    TRAIN_CARD_LOOKUP,
+    TRAIN_CARD_STANDARD_KEYS,
+    TRAIN_CARD_CHALLENGE_DECK,
+    getTrainCardIdCounter: () => trainCardIdCounter,
+    setTrainCardIdCounter: value => { trainCardIdCounter = value; }
+  });
 }
 
 function countRainbowCards(cards) {
-  return (cards || []).filter(card => {
-    if (!card) return false;
-    if (typeof card === 'string') return card === 'rainbow';
-    return card.type_key === 'rainbow';
-  }).length;
+  return countRainbowCardsModule(cards);
 }
 
 function dealFreshVisibleTrainCards() {
-  let cards = [];
-  let tries = 0;
-  do {
-    cards = Array.from({ length: 5 }, () => createTrainCard(randomTrainCardKey()));
-    tries += 1;
-  } while (countRainbowCards(cards) >= 3 && tries < 30);
-  return cards;
+  return dealFreshVisibleTrainCardsModule({
+    TRAIN_CARD_TYPES,
+    TRAIN_CARD_LOOKUP,
+    TRAIN_CARD_STANDARD_KEYS,
+    TRAIN_CARD_CHALLENGE_DECK,
+    getTrainCardIdCounter: () => trainCardIdCounter,
+    setTrainCardIdCounter: value => { trainCardIdCounter = value; }
+  });
 }
 
 function normalizeVisibleTrainCards(raw) {
-  if (!Array.isArray(raw) || raw.length !== 5) return dealFreshVisibleTrainCards();
-  const cards = raw.map(item => {
-    if (typeof item === 'string') return createTrainCard(item);
-    if (!item || !TRAIN_CARD_LOOKUP[String(item.type_key)]) return createTrainCard('rainbow');
-    return sanitizeTrainCard(item, 'rainbow');
+  return normalizeVisibleTrainCardsModule({
+    raw,
+    TRAIN_CARD_LOOKUP,
+    TRAIN_CARD_TYPES,
+    TRAIN_CARD_STANDARD_KEYS,
+    TRAIN_CARD_CHALLENGE_DECK,
+    getTrainCardIdCounter: () => trainCardIdCounter,
+    setTrainCardIdCounter: value => { trainCardIdCounter = value; }
   });
-  return countRainbowCards(cards) >= 3 ? dealFreshVisibleTrainCards() : cards;
 }
 
 function normalizeTrainHandCards(raw, legacyCounts) {
-  const hand = [];
-  if (Array.isArray(raw)) {
-    raw.forEach(item => {
-      if (!item) return;
-      if (typeof item === 'string') {
-        hand.push(createTrainCard(item));
-        return;
-      }
-      hand.push(sanitizeTrainCard(item, 'rainbow'));
-    });
-  }
-  if (!hand.length && legacyCounts && typeof legacyCounts === 'object') {
-    Object.entries(legacyCounts).forEach(([typeKey, count]) => {
-      const safeCount = Math.max(0, Number(count) || 0);
-      for (let i = 0; i < safeCount; i += 1) {
-        hand.push(createTrainCard(typeKey));
-      }
-    });
-  }
-  return hand;
+  return normalizeTrainHandCardsModule({
+    raw,
+    legacyCounts,
+    TRAIN_CARD_LOOKUP,
+    TRAIN_CARD_STANDARD_KEYS,
+    TRAIN_CARD_CHALLENGE_DECK,
+    getTrainCardIdCounter: () => trainCardIdCounter,
+    setTrainCardIdCounter: value => { trainCardIdCounter = value; }
+  });
 }
 
 function normalizeCompletedChallengeCards(raw) {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .filter(Boolean)
-    .map(item => sanitizeTrainCard(item, 'rainbow'));
+  return normalizeCompletedChallengeCardsModule({
+    raw,
+    TRAIN_CARD_LOOKUP,
+    TRAIN_CARD_STANDARD_KEYS,
+    TRAIN_CARD_CHALLENGE_DECK,
+    getTrainCardIdCounter: () => trainCardIdCounter,
+    setTrainCardIdCounter: value => { trainCardIdCounter = value; }
+  });
 }
 
 function reshuffleVisibleTrainCardsIfNeeded() {
-  if (countRainbowCards(gameState.visible_train_cards) >= 3) {
-    gameState.visible_train_cards = dealFreshVisibleTrainCards();
-  }
+  return reshuffleVisibleTrainCardsIfNeededModule({
+    gameState,
+    normalizeVisibleTrainCards,
+    dealFreshVisibleTrainCards
+  });
 }
 
 function getPreviewTrainCard() {
-  if (previewVisibleTrainCardId === null || previewVisibleTrainCardId === undefined) return null;
-  const cards = normalizeVisibleTrainCards(gameState.visible_train_cards);
-  return cards.find(card => card.id === previewVisibleTrainCardId) || null;
+  return getPreviewTrainCardModule({
+    previewVisibleTrainCardId,
+    gameState,
+    normalizeVisibleTrainCards
+  });
 }
 
 function computeTrainCarStoreCounts() {
-  const counts = createEmptyTrainCarCounts();
-  const completed = normalizeCompletedChallengeCards(gameState.completed_challenge_cards);
-  completed.forEach(card => {
-    if (!card || !Object.prototype.hasOwnProperty.call(counts, card.type_key)) return;
-    const reward = Number(card.challenge?.reward);
-    counts[card.type_key] += Number.isFinite(reward) ? reward : 0;
+  return computeTrainCarStoreCountsModule({
+    gameState,
+    createEmptyTrainCarCounts,
+    normalizeCompletedChallengeCards
   });
-  return counts;
 }
 
-
 function setTrainCardTrayOpen(isOpen) {
-  isTrainCardTrayOpen = !!isOpen;
-  const tray = document.getElementById('trainCardBar');
-  const toggle = document.getElementById('trainCardTrayToggle');
-  if (tray) {
-    tray.classList.toggle('is-open', isTrainCardTrayOpen);
-    tray.classList.toggle('is-closed', !isTrainCardTrayOpen);
-  }
-  if (toggle) {
-    toggle.setAttribute('aria-expanded', isTrainCardTrayOpen ? 'true' : 'false');
-    toggle.setAttribute('aria-label', isTrainCardTrayOpen ? 'Close challenge deck' : 'Open challenge deck');
-    toggle.setAttribute('title', isTrainCardTrayOpen ? 'Close challenge deck' : 'Open challenge deck');
-    toggle.textContent = '▲';
-    toggle.classList.toggle('is-open', isTrainCardTrayOpen);
-  }
+  return setTrainCardTrayOpenModule({
+    isOpen,
+    setIsTrainCardTrayOpen: value => { isTrainCardTrayOpen = value; }
+  });
 }
 
 function openTrainCardTray() {
-  setTrainCardTrayOpen(true);
+  return openTrainCardTrayModule(setTrainCardTrayOpen);
 }
 
 function closeTrainCardTray() {
-  setTrainCardTrayOpen(false);
+  return closeTrainCardTrayModule(setTrainCardTrayOpen);
 }
 
 function toggleTrainCardTray() {
-  setTrainCardTrayOpen(!isTrainCardTrayOpen);
+  return toggleTrainCardTrayModule(isTrainCardTrayOpen, setTrainCardTrayOpen);
 }
 
 function renderVisibleTrainCards() {
-  const row = document.getElementById('trainCardRow');
-  if (!row) return;
-  gameState.visible_train_cards = normalizeVisibleTrainCards(gameState.visible_train_cards);
-  row.innerHTML = '';
-  const total = gameState.visible_train_cards.length;
-  const center = (total - 1) / 2;
-  gameState.visible_train_cards.forEach((card, index) => {
-    const meta = TRAIN_CARD_LOOKUP[card.type_key];
-    const el = document.createElement('div');
-    const offset = index - center;
-    el.className = 'train-card ' + meta.key;
-    el.title = 'Preview ' + meta.label;
-    el.style.setProperty('--fan-rotate', (offset * 4) + 'deg');
-    el.style.setProperty('--fan-lift', (Math.abs(offset) * 3) + 'px');
-    el.innerHTML = '<span>' + escapeHtml(meta.label) + '</span>';
-    el.addEventListener('click', (event) => { event.stopPropagation(); previewVisibleTrainCard(card.id); });
-    row.appendChild(el);
+  return renderVisibleTrainCardsModule({
+    gameState,
+    TRAIN_CARD_LOOKUP,
+    normalizeVisibleTrainCards,
+    previewVisibleTrainCard,
+    escapeHtml
   });
 }
 
 function renderActiveChallengeCard() {
-  const overlay = document.getElementById('activeChallengeOverlay');
-  const container = document.getElementById('activeChallengeContainer');
-  if (!overlay || !container) return;
-  gameState.active_challenge_card = gameState.active_challenge_card ? sanitizeTrainCard(gameState.active_challenge_card, 'rainbow') : null;
-  const previewCard = getPreviewTrainCard();
-  const activeCard = gameState.active_challenge_card || null;
-  const cardToShow = previewCard || activeCard;
-
-  if (!cardToShow) {
-    overlay.classList.remove('hidden');
-    container.className = 'ticket-list empty-state';
-    container.textContent = 'Choose a face-up train card to preview its challenge.';
-    return;
-  }
-
-  const meta = TRAIN_CARD_LOOKUP[cardToShow.type_key] || TRAIN_CARD_LOOKUP['rainbow'];
-  const challenge = cardToShow.challenge || {};
-  const isPreview = !!previewCard;
-  const canClaim = !activeCard;
-  let actionsHtml = '';
-  let messageHtml = '';
-
-  if (isPreview) {
-    actionsHtml =
-      '<div class="train-card-actions">' +
-        '<button id="claimChallengeBtn"' + (canClaim ? '' : ' disabled') + '>Claim chalange</button>' +
-        '<button id="backFromChallengeBtn" class="secondary">Back</button>' +
-      '</div>';
-    if (!canClaim) {
-      messageHtml = '<div class="train-card-message">Finish the current active challenge before claiming another.</div>';
-    }
-  } else {
-    actionsHtml =
-      '<div class="train-card-actions">' +
-        '<button id="completeChallengeBtn">Mark as complete</button>' +
-      '</div>';
-  }
-
-  container.className = '';
-  container.innerHTML =
-    '<div class="active-train-card ' + meta.key + '">' +
-      '<div class="active-train-card-header">' +
-        '<strong>' + escapeHtml(meta.label) + '</strong>' +
-        '<span class="train-hand-card-badge">' + (isPreview ? 'Preview' : 'Active') + '</span>' +
-      '</div>' +
-      '<h3>' + escapeHtml(challenge.name || 'Challenge name placeholder') + '</h3>' +
-      '<p>' + escapeHtml(challenge.description || 'Challenge details go here.') + '</p>' +
-      '<div class="active-train-card-meta">' +
-        '<span>Reward: ' + escapeHtml(formatChallengeReward(challenge.reward)) + '</span>' +
-        '<span>Area: ' + escapeHtml(challenge.locale || 'Any') + '</span>' +
-      '</div>' +
-      actionsHtml +
-      messageHtml +
-    '</div>';
-
-  overlay.classList.remove('hidden');
-
-  if (isPreview) {
-    const claimBtn = document.getElementById('claimChallengeBtn');
-    const backBtn = document.getElementById('backFromChallengeBtn');
-    if (claimBtn) claimBtn.addEventListener('click', claimPreviewedChallenge);
-    if (backBtn) backBtn.addEventListener('click', clearPreviewedChallenge);
-  } else {
-    const completeBtn = document.getElementById('completeChallengeBtn');
-    if (completeBtn) completeBtn.addEventListener('click', completeActiveChallenge);
-  }
+  return renderActiveChallengeCardModule({
+    gameState,
+    TRAIN_CARD_LOOKUP,
+    previewVisibleTrainCardId,
+    sanitizeTrainCard,
+    getPreviewTrainCard,
+    formatChallengeReward,
+    claimPreviewedChallenge,
+    clearPreviewedChallenge,
+    completeActiveChallenge,
+    escapeHtml
+  });
 }
 
 function renderTrainHand() {
-  const summary = document.getElementById('trainHandSummary');
-  const container = document.getElementById('trainHandContainer');
-  if (!summary || !container) return;
-
-  const earned = computeTrainCarStoreCounts();
-  const available = computeAvailableTrainCarCounts();
-  const totalAvailable = Object.values(available).reduce((sum, value) => sum + value, 0);
-  summary.textContent = totalAvailable + ' train car' + (totalAvailable === 1 ? '' : 's') + ' available';
-
-  if (!totalAvailable) {
-    container.className = 'ticket-list empty-state';
-    container.textContent = 'Complete challenges to earn train cars.';
-    return;
-  }
-
-  container.className = 'train-hand-grid';
-  container.innerHTML = TRAIN_CARD_TYPES.map(card => {
-    const meta = TRAIN_CARD_LOOKUP[card.key];
-    const availableCount = available[card.key] || 0;
-    const earnedCount = earned[card.key] || 0;
-    return (
-      '<div class="train-hand-chip ' + escapeHtml(meta.key) + '">' +
-        '<div class="train-hand-chip-main">' +
-          '<span class="train-hand-swatch"></span>' +
-          '<div class="train-hand-label">' + escapeHtml(meta.label) + '</div>' +
-        '</div>' +
-        '<div class="train-hand-counts">' +
-          '<span class="train-hand-badge">' + escapeHtml(String(availableCount)) + '</span>' +
-          '<span class="train-hand-badge is-earned">/' + escapeHtml(String(earnedCount)) + '</span>' +
-        '</div>' +
-      '</div>'
-    );
-  }).join('');
+  return renderTrainHandModule({
+    gameState,
+    TRAIN_CARD_TYPES,
+    TRAIN_CARD_LOOKUP,
+    computeTrainCarStoreCounts,
+    computeAvailableTrainCarCounts,
+    escapeHtml
+  });
 }
 
 function renderCompletedChallenges() {
-  const summary = document.getElementById('completedChallengesSummary');
-  const container = document.getElementById('completedChallengesContainer');
-  if (!summary || !container) return;
-
-  gameState.completed_challenge_cards = normalizeCompletedChallengeCards(gameState.completed_challenge_cards);
-  const completed = gameState.completed_challenge_cards.slice();
-  summary.textContent = completed.length + ' completed';
-
-  if (!completed.length) {
-    container.className = 'ticket-list empty-state';
-    container.textContent = 'No completed challenges yet.';
-    return;
-  }
-
-  container.className = 'train-hand-list';
-  container.innerHTML = completed.slice().reverse().map(card => {
-    const meta = TRAIN_CARD_LOOKUP[card.type_key] || TRAIN_CARD_LOOKUP['rainbow'];
-    return (
-      '<div class="completed-train-card ' + meta.key + '">' +
-        '<div class="train-hand-card-top">' +
-          '<strong>' + escapeHtml(meta.label) + '</strong>' +
-          '<span class="train-hand-card-badge">+' + escapeHtml(formatChallengeReward(card.challenge?.reward)) + '</span>' +
-        '</div>' +
-        '<h4>' + escapeHtml(card.challenge?.name || 'Challenge name placeholder') + '</h4>' +
-        '<p>' + escapeHtml(card.challenge?.description || 'Challenge details go here.') + '</p>' +
-      '</div>'
-    );
-  }).join('');
+  return renderCompletedChallengesModule({
+    gameState,
+    TRAIN_CARD_LOOKUP,
+    normalizeCompletedChallengeCards,
+    formatChallengeReward,
+    escapeHtml
+  });
 }
 
 function previewVisibleTrainCard(cardId) {
-  const cards = normalizeVisibleTrainCards(gameState.visible_train_cards);
-  const chosen = cards.find(card => card.id === cardId);
-  if (!chosen) return;
-  gameState.visible_train_cards = cards.slice();
-  previewVisibleTrainCardId = chosen.id;
-  openTrainCardTray();
-  renderActiveChallengeCard();
+  return previewVisibleTrainCardModule({
+    cardId,
+    gameState,
+    normalizeVisibleTrainCards,
+    setPreviewVisibleTrainCardId: value => { previewVisibleTrainCardId = value; },
+    openTrainCardTray,
+    renderActiveChallengeCard
+  });
 }
 
 function clearPreviewedChallenge() {
-  previewVisibleTrainCardId = null;
-  closeTrainCardTray();
-  renderActiveChallengeCard();
+  return clearPreviewedChallengeModule({
+    setPreviewVisibleTrainCardId: value => { previewVisibleTrainCardId = value; },
+    closeTrainCardTray,
+    renderActiveChallengeCard
+  });
 }
 
 function claimPreviewedChallenge() {
-  if (gameState.active_challenge_card) return;
-  const cards = normalizeVisibleTrainCards(gameState.visible_train_cards);
-  const index = cards.findIndex(card => card.id === previewVisibleTrainCardId);
-  if (index === -1) return;
-  const chosen = cards[index];
-  gameState.active_challenge_card = sanitizeTrainCard(chosen, 'rainbow');
-  gameState.visible_train_cards = cards.slice();
-  gameState.visible_train_cards[index] = createTrainCard(randomTrainCardKey());
-  previewVisibleTrainCardId = null;
-  reshuffleVisibleTrainCardsIfNeeded();
-  closeTrainCardTray();
-  renderVisibleTrainCards();
-  renderActiveChallengeCard();
-  queuePersist('Challenge claimed');
+  return claimPreviewedChallengeModule({
+    gameState,
+    previewVisibleTrainCardId,
+    normalizeVisibleTrainCards,
+    sanitizeTrainCard,
+    createTrainCard,
+    reshuffleVisibleTrainCardsIfNeeded,
+    setPreviewVisibleTrainCardId: value => { previewVisibleTrainCardId = value; },
+    closeTrainCardTray,
+    renderVisibleTrainCards,
+    renderActiveChallengeCard,
+    queuePersist
+  });
 }
 
 function completeActiveChallenge() {
-  if (!gameState.active_challenge_card) return;
-  gameState.completed_challenge_cards = normalizeCompletedChallengeCards(gameState.completed_challenge_cards);
-  gameState.completed_challenge_cards.push(sanitizeTrainCard(gameState.active_challenge_card, 'rainbow'));
-  gameState.active_challenge_card = null;
-  previewVisibleTrainCardId = null;
-  closeTrainCardTray();
-  renderActiveChallengeCard();
-  renderTrainHand();
-  renderCompletedChallenges();
-  queuePersist('Challenge completed');
+  return completeActiveChallengeModule({
+    gameState,
+    normalizeCompletedChallengeCards,
+    sanitizeTrainCard,
+    setPreviewVisibleTrainCardId: value => { previewVisibleTrainCardId = value; },
+    closeTrainCardTray,
+    renderActiveChallengeCard,
+    renderTrainHand,
+    renderCompletedChallenges,
+    queuePersist
+  });
 }
 function createNewGameState() {
   return {
