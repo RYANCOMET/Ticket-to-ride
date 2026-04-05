@@ -38,6 +38,16 @@ import {
   updateStationStyles as updateStationStylesModule
 } from "./map/station-guides.js";
 
+import {
+  getTrainCardTypeLabel as getTrainCardTypeLabelModule,
+  createEmptyTrainCarCounts as createEmptyTrainCarCountsModule,
+  computeSpentTrainCarCounts as computeSpentTrainCarCountsModule,
+  computeAvailableTrainCarCounts as computeAvailableTrainCarCountsModule,
+  chooseGreyRouteSpendPlan as chooseGreyRouteSpendPlanModule,
+  getRouteClaimOffer as getRouteClaimOfferModule,
+  describeSpendPlan as describeSpendPlanModule
+} from "./game/route-claims.js";
+
 const SUPABASE_URL = 'https://iloeoccqvxwwlmgbbweu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlsb2VvY2Nxdnh3d2xtZ2Jid2V1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzg3NDIsImV4cCI6MjA5MDY1NDc0Mn0.PseTgg81ZTeeIohlILmgHLNx31KlzphubwVi6strXPw';
 const GAME_ID = 'europe-main';
@@ -679,119 +689,42 @@ function parseRouteClaimType(feature) {
 }
 
 function getTrainCardTypeLabel(typeKey) {
-  if (typeKey === 'grey') return 'Grey';
-  return (TRAIN_CARD_LOOKUP[typeKey] || {}).label || 'Unknown';
+  return getTrainCardTypeLabelModule(typeKey, TRAIN_CARD_LOOKUP);
 }
 
 function createEmptyTrainCarCounts(includeGrey = false) {
-  const keys = includeGrey ? ['grey', ...TRAIN_CARD_TYPES.map(card => card.key)] : TRAIN_CARD_TYPES.map(card => card.key);
-  return Object.fromEntries(keys.map(key => [key, 0]));
+  return createEmptyTrainCarCountsModule(TRAIN_CARD_TYPES, includeGrey);
 }
 
 function computeSpentTrainCarCounts() {
-  const counts = createEmptyTrainCarCounts();
-  const routeCosts = gameState.route_claim_costs || {};
-  Object.values(routeCosts).forEach(plan => {
-    if (!plan || typeof plan !== 'object') return;
-    Object.entries(plan).forEach(([typeKey, count]) => {
-      if (!Object.prototype.hasOwnProperty.call(counts, typeKey)) return;
-      counts[typeKey] += Math.max(0, Number(count) || 0);
-    });
-  });
-  return counts;
+  return computeSpentTrainCarCountsModule(gameState, TRAIN_CARD_TYPES);
 }
 
 function computeAvailableTrainCarCounts() {
-  const earned = computeTrainCarStoreCounts();
-  const spent = computeSpentTrainCarCounts();
-  const available = createEmptyTrainCarCounts();
-  Object.keys(available).forEach(typeKey => {
-    available[typeKey] = Math.max(0, (Number(earned[typeKey]) || 0) - (Number(spent[typeKey]) || 0));
+  return computeAvailableTrainCarCountsModule({
+    gameState,
+    trainCardTypes: TRAIN_CARD_TYPES,
+    computeTrainCarStoreCounts
   });
-  return available;
 }
 
 function chooseGreyRouteSpendPlan(required, availableCounts) {
-  let best = null;
-  TRAIN_CARD_STANDARD_KEYS.forEach(typeKey => {
-    const colorCount = Number(availableCounts[typeKey]) || 0;
-    const rainbowCount = Number(availableCounts.rainbow) || 0;
-    if (colorCount + rainbowCount < required) return;
-    const useColor = Math.min(required, colorCount);
-    const useRainbow = Math.max(0, required - useColor);
-    const candidate = {
-      type_key: typeKey,
-      spend_plan: {
-        [typeKey]: useColor,
-        rainbow: useRainbow
-      },
-      rainbow_used: useRainbow,
-      color_used: useColor
-    };
-    if (!best || candidate.rainbow_used < best.rainbow_used || (candidate.rainbow_used === best.rainbow_used && candidate.color_used > best.color_used)) {
-      best = candidate;
-    }
-  });
-  return best;
+  return chooseGreyRouteSpendPlanModule(required, availableCounts, TRAIN_CARD_STANDARD_KEYS);
 }
 
 function getRouteClaimOffer(routeKey) {
-  const group = routeGroups[routeKey];
-  if (!group) return { canAfford: false, reason: 'Unknown connection.' };
-  const required = Number(group.length) || 0;
-  const routeType = group.claim_type || 'grey';
-  const available = computeAvailableTrainCarCounts();
-  if (routeType === 'grey') {
-    const greyPlan = chooseGreyRouteSpendPlan(required, available);
-    if (!greyPlan) {
-      return {
-        canAfford: false,
-        routeType,
-        required,
-        available,
-        reason: 'Need ' + required + ' matching train cars of one colour pair, with rainbow cards allowed as wilds.'
-      };
-    }
-    return {
-      canAfford: true,
-      routeType,
-      required,
-      available,
-      chosenTypeKey: greyPlan.type_key,
-      spendPlan: greyPlan.spend_plan
-    };
-  }
-  const colorCount = Number(available[routeType]) || 0;
-  const rainbowCount = Number(available.rainbow) || 0;
-  if (colorCount + rainbowCount < required) {
-    return {
-      canAfford: false,
-      routeType,
-      required,
-      available,
-      reason: 'Need ' + required + ' ' + getTrainCardTypeLabel(routeType) + ' train cars. Rainbow cards can cover missing cars.'
-    };
-  }
-  const useColor = Math.min(required, colorCount);
-  return {
-    canAfford: true,
-    routeType,
-    required,
-    available,
-    chosenTypeKey: routeType,
-    spendPlan: {
-      [routeType]: useColor,
-      rainbow: Math.max(0, required - useColor)
-    }
-  };
+  return getRouteClaimOfferModule({
+    routeKey,
+    routeGroups,
+    gameState,
+    trainCardStandardKeys: TRAIN_CARD_STANDARD_KEYS,
+    getTrainCardTypeLabel,
+    computeAvailableTrainCarCounts
+  });
 }
 
 function describeSpendPlan(plan) {
-  if (!plan || typeof plan !== 'object') return 'None';
-  const parts = Object.entries(plan)
-    .filter(([, count]) => (Number(count) || 0) > 0)
-    .map(([typeKey, count]) => String(count) + ' ' + getTrainCardTypeLabel(typeKey));
-  return parts.length ? parts.join(' + ') : 'None';
+  return describeSpendPlanModule(plan, getTrainCardTypeLabel);
 }
 
 function parseRouteEndpoints(routeKey) {
