@@ -1082,24 +1082,7 @@ function escapeHtml(value) {
 }
 
 function applyStateToVisuals() {
-  isApplyingRemoteState = true;
-  Object.values(routeLayersById).forEach(entry => {
-    updateRouteStyle(entry);
-    syncTrainOverlay(entry);
-    bindRoutePopup(entry);
-  });
-  clearStationGuides();
-  
-  previewVisibleTrainCardId = null;
-  renderOffer();
-  renderHand();
-  renderVisibleTrainCards();
-  renderTrainHand();
-  renderActiveChallengeCard();
-  renderCompletedChallenges();
-  updateStationStyles();
-  updateStats();
-  isApplyingRemoteState = false;
+  return controller.renderAll()
 }
 
 function toggleRoute(entry) {
