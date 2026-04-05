@@ -1564,7 +1564,6 @@ buildStations({
   escapeHtml,
   L
 });
-fitToData();
 map.whenReady(async () => {
   refreshAllTrainOverlays();
   updateStats();
