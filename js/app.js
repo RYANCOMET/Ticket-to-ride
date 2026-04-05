@@ -80,7 +80,10 @@ import {
 
 import { createGameSync } from "./game/game-sync.js";
 
-const sync = createGameSync();
+const sync = createGameSync({
+  sbClient
+  gameId: GAME_ID,
+});
 const SUPABASE_URL = 'https://iloeoccqvxwwlmgbbweu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlsb2VvY2Nxdnh3d2xtZ2Jid2V1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzg3NDIsImV4cCI6MjA5MDY1NDc0Mn0.PseTgg81ZTeeIohlILmgHLNx31KlzphubwVi6strXPw';
 const GAME_ID = 'europe-main';
