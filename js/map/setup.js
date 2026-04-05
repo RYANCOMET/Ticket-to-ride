@@ -29,15 +29,10 @@ export function registerRouteGroups({
 }
 
 export function fitToData({ map, routeLayersById, L }) {
-  const bounds = L.latLngBounds([]);
+  const layers = Object.values(routeLayersById);
 
-  Object.values(routeLayersById).forEach(entry => {
-    bounds.extend(entry.bounds);
-  });
+  if (!layers.length) return;
 
-  if (bounds.isValid()) {
-    map.fitBounds(bounds.pad(0.03));
-  } else {
-    map.setView([50, 10], 5);
-  }
+  const group = L.featureGroup(layers);
+  map.fitBounds(group.getBounds(), { padding: [20, 20] });
 }
