@@ -2,6 +2,7 @@ import { routesData } from "./data/routes-data.js";
 import { stationsData } from "./data/stations-data.js";
 import { state } from "./state.js";
 import { initAccordions } from "./ui/accordions.js";
+import { createGameController } from "./game/game-controller.js";
 import {
   syncMobileSidebarMode,
   applySidebarState,
@@ -318,6 +319,44 @@ function getPreviewTrainCard() {
     normalizeVisibleTrainCards
   });
 }
+
+const controller = createGameController({
+  // ---- STATE ACCESS ----
+  getGameState: () => gameState,
+  setGameState: (next) => { gameState = next; },
+
+  createNewGameState,
+
+  getSelectedOfferIndexes: () => selectedOfferIndexes,
+  setSelectedOfferIndexes: (next) => { selectedOfferIndexes = next; },
+
+  getPreviewVisibleTrainCardId: () => previewVisibleTrainCardId,
+  setPreviewVisibleTrainCardId: (next) => { previewVisibleTrainCardId = next; },
+
+  // ---- ROUTE SYSTEM ----
+  routeGroups,
+  routeLayersById,
+  segmentToRouteKey,
+
+  updateRouteStyle,
+  bindRoutePopup,
+  refreshAllTrainOverlays,
+
+  // ---- RENDER FUNCTIONS ----
+  renderOffer,
+  renderHand,
+  renderVisibleTrainCards,
+  renderTrainHand,
+  renderActiveChallengeCard,
+  renderCompletedChallenges,
+  updateStationStyles,
+  updateStats,
+  updateDrawControls,
+  clearStationGuides,
+
+  // ---- PERSIST ----
+  queuePersist
+});
 
 function computeTrainCarStoreCounts() {
   return computeTrainCarStoreCountsModule({
